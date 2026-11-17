@@ -1,0 +1,15 @@
+﻿services:
+  - type: web
+    name: benxin-app
+    runtime: python
+    plan: free
+    buildCommand: "true"
+    startCommand: "python server.py"
+    healthCheckPath: /api/health
+    envVars:
+      - key: JC_TOKEN
+        sync: false          # ★ 在 Render 面板里自己填一个密码（比如 bx-8k3m2p）
+      - key: JC_NO_BROWSER
+        value: "1"
+      - key: PYTHONIOENCODING
+        value: "utf-8"
