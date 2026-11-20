@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#101418">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="本心盘口">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>本心盘口分析台 · 离线工作台</title>
+<style>
+/* ============ 设计变量：对齐 DeepSeek Harness 深色风格 ============ */
+:root{
+  --bg:#101418; --bg-2:#151a20; --panel:#171d24; --panel-2:#1b222a;
+  --line:#232c36; --line-2:#2c3846;
+  --txt:#e6edf3; --txt-2:#a8b6c4; --txt-3:#6e7f8f;
+  --acc:#4d9cf6; --acc-2:#2f7fd6; --acc-soft:rgba(77,156,246,.14);
+  --ok:#3fb950; --warn:#d29922; --bad:#f85149; --purple:#a371f7;
+  --radius:10px; --radius-s:7px;
+  --mono:ui-monospace,SFMono-Regular,"Cascadia Mono",Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#2b3540;border-radius:6px;border:2px solid var(--bg)}
+::-webkit-scrollbar-thumb:hover{background:#3a4653}
+
+/* ============ 布局 ============ */
+#app{display:flex;height:100vh;overflow:hidden}
+#side{width:246px;flex:0 0 246px;background:var(--bg-2);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+.brand{padding:14px 16px 12px;border-bottom:1px solid var(--line)}
+.brand .t{font-weight:650;font-size:14.5px;letter-spacing:.2px}
+.brand .s{font-size:11.5px;color:var(--txt-3);margin-top:2px}
+.nav{flex:1;overflow-y:auto;padding:8px}
+.nav .grp{font-size:11px;color:var(--txt-3);padding:10px 10px 5px;letter-spacing:.6px}
+.nav a{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--radius-s);color:var(--txt-2);text-decoration:none;font-size:13px;cursor:pointer;user-select:none}
+.nav a:hover{background:var(--panel);color:var(--txt)}
+.nav a.on{background:var(--acc-soft);color:#cfe4fb;box-shadow:inset 2px 0 0 var(--acc)}
+.nav a .ic{width:18px;text-align:center;opacity:.9;font-size:14px}
+.side-foot{padding:9px 12px;border-top:1px solid var(--line);font-size:11px;color:var(--txt-3);display:flex;justify-content:space-between;gap:6px}
+#main{flex:1;overflow-y:auto;overflow-x:hidden;padding:22px 26px 80px;min-width:0}
+.wrap{max-width:1560px;margin:0 auto}
+.page-h{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
+.page-h h1{margin:0;font-size:19px;font-weight:650}
+.page-h p{margin:3px 0 0;color:var(--txt-3);font-size:12.5px;max-width:1000px}
+#pages{min-width:0}
+#pages > .page{display:none}
+#pages > .page.on{display:block}
+
+/* ============ 卡片 / 控件 ============ */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px}
+.card>h2{margin:0 0 4px;font-size:14px;font-weight:640;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card>h2 .hint{font-weight:400;color:var(--txt-3);font-size:12px}
+.card>.desc{color:var(--txt-3);font-size:12.2px;margin:0 0 12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.grow{flex:1;min-width:170px}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(178px,1fr))}
+
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--txt-2);min-width:0}
+label.f .k{display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+input,select,textarea,button{font:inherit;color:var(--txt)}
+input[type=text],input[type=number],input[type=password],input[type=datetime-local],select,textarea{
+  background:var(--bg);border:1px solid var(--line-2);border-radius:var(--radius-s);padding:6px 9px;width:100%;outline:none}
+textarea{font-family:var(--mono);font-size:12.5px;line-height:1.65;resize:vertical}
+input:focus,select:focus,textarea:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+input[readonly]{color:var(--txt-3)}
+input.dirty{border-color:var(--warn);background:#1e1a12}
+button{background:var(--panel-2);border:1px solid var(--line-2);border-radius:var(--radius-s);padding:7px 13px;cursor:pointer;white-space:nowrap}
+button:hover{background:#212a34;border-color:#3a4756}
+button:active{transform:translateY(1px)}
+button.pri{background:var(--acc-2);border-color:var(--acc);color:#fff;font-weight:600}
+button.pri:hover{background:var(--acc)}
+button.ghost{background:transparent}
+button.danger{border-color:#5c2b2b;color:#ff9c96}
+button.sm{padding:4px 9px;font-size:12px}
+button:disabled{opacity:.45;cursor:not-allowed}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{border:1px solid var(--line-2);border-radius:999px;padding:3px 10px;font-size:11.5px;color:var(--txt-2);cursor:pointer;background:var(--bg)}
+.chip.on{background:var(--acc-soft);border-color:var(--acc);color:#cfe4fb}
+
+/* ============ 表格 ============ */
+.tw{overflow:auto;border:1px solid var(--line);border-radius:var(--radius-s);max-height:none}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:12.3px}
+th,td{padding:6px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle;white-space:nowrap}
+th{background:var(--panel-2);color:var(--txt-2);font-weight:600;position:sticky;top:0;z-index:2;font-size:11.8px}
+tbody tr:hover{background:#1a212a}
+td.num{font-family:var(--mono);text-align:right}
+td.wrapcell{white-space:normal;max-width:330px}
+.pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;border:1px solid transparent;white-space:nowrap}
+.pill.ok{background:rgba(63,185,80,.14);color:#7ee787;border-color:rgba(63,185,80,.3)}
+.pill.bad{background:rgba(248,81,73,.14);color:#ff9c96;border-color:rgba(248,81,73,.3)}
+.pill.warn{background:rgba(210,153,34,.15);color:#e3b341;border-color:rgba(210,153,34,.32)}
+.pill.info{background:var(--acc-soft);color:#9ccbfb;border-color:rgba(77,156,246,.3)}
+.pill.mute{background:#1e252d;color:var(--txt-3);border-color:var(--line-2)}
+.pill.purple{background:rgba(163,113,247,.15);color:#c8a8ff;border-color:rgba(163,113,247,.32)}
+
+/* ============ 杂项 ============ */
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
+.kpi .v{font-size:23px;font-weight:660;font-family:var(--mono);line-height:1.2}
+.kpi .l{font-size:11.7px;color:var(--txt-3);margin-top:3px}
+.kpi .sub{font-size:11px;color:var(--txt-3)}
+.stat{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--txt-2);margin-top:8px}
+.stat>span{background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-s);padding:4px 9px}
+pre.out{background:var(--bg);border:1px solid var(--line-2);border-radius:var(--radius-s);padding:11px 12px;font-family:var(--mono);font-size:12px;line-height:1.62;overflow:auto;max-height:440px;margin:0;white-space:pre-wrap;word-break:break-all}
+.note{border-left:3px solid var(--acc);background:var(--acc-soft);padding:8px 12px;border-radius:0 var(--radius-s) var(--radius-s) 0;font-size:12.3px;color:#c7ddf5;margin:10px 0}
+.note.warn{border-color:var(--warn);background:rgba(210,153,34,.1);color:#e8d3a3}
+.note.bad{border-color:var(--bad);background:rgba(248,81,73,.1);color:#f3c3c0}
+.note.ok{border-color:var(--ok);background:rgba(63,185,80,.1);color:#c5ecc9}
+.sec-title{font-size:12px;color:var(--txt-3);letter-spacing:.5px;margin:16px 0 8px;padding-bottom:5px;border-bottom:1px dashed var(--line-2)}
+.bar{height:7px;background:var(--bg);border-radius:4px;overflow:hidden;border:1px solid var(--line)}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--acc-2),var(--acc))}
+.bar>i.ok{background:linear-gradient(90deg,#2b8a3e,#3fb950)}
+.bar>i.bad{background:linear-gradient(90deg,#a3322c,#f85149)}
+.bar>i.warn{background:linear-gradient(90deg,#9e6a03,#d29922)}
+details{border:1px solid var(--line);border-radius:var(--radius-s);padding:9px 12px;background:var(--bg);margin-bottom:8px}
+details>summary{cursor:pointer;font-size:12.6px;color:var(--txt-2);font-weight:600}
+details[open]>summary{margin-bottom:9px;color:var(--txt)}
+.split{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:1420px){.split.two{grid-template-columns:minmax(0,1.12fr) minmax(0,1fr)}}
+.mini{font-size:11.5px;color:var(--txt-3)}
+.ellip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:inline-block;vertical-align:bottom}
+.flexline{display:flex;align-items:center;gap:8px}
+/* 球员库：可编辑行（每行一组输入控件，不是普通表格） */
+.pl-grid{display:flex;flex-direction:column;gap:3px;max-height:540px;overflow:auto;padding:2px}
+.pl-head{display:flex;gap:5px;align-items:center;font-size:11.5px;color:var(--txt-3);
+  position:sticky;top:0;background:var(--panel);padding:4px 2px;border-bottom:1px solid var(--line);z-index:2}
+.pl-row{display:flex;gap:5px;align-items:center;padding:1px 2px;border-radius:5px}
+.pl-row:hover{background:rgba(255,255,255,.03)}
+.pl-row input,.pl-row select{font-size:12px;padding:3px 5px}
+.pl-row .btn{padding:2px 7px;font-size:12px}
+.spacer{flex:1}
+#toast{position:fixed;right:20px;bottom:20px;display:flex;flex-direction:column;gap:8px;z-index:99}
+#toast div{background:#1e2630;border:1px solid var(--line-2);border-left:3px solid var(--acc);padding:9px 14px;border-radius:var(--radius-s);font-size:12.5px;box-shadow:0 8px 24px rgba(0,0,0,.45);animation:sl .18s ease}
+#toast div.ok{border-left-color:var(--ok)}#toast div.bad{border-left-color:var(--bad)}#toast div.warn{border-left-color:var(--warn)}
+@keyframes sl{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--txt-3);margin-top:8px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+code{font-family:var(--mono);background:var(--bg);border:1px solid var(--line);padding:1px 5px;border-radius:4px;font-size:11.8px}
+.badge-num{font-family:var(--mono);color:var(--txt-3);font-size:11px}
+
+/* ================= 密码锁（前端门禁，挡住随手点开的人） ================= */
+body.gate{overflow:hidden}
+body.gate #app,body.gate #toast{display:none!important}
+#gateOverlay{
+  position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;
+  padding:max(20px,env(safe-area-inset-top)) 20px;
+  background:radial-gradient(1200px 600px at 50% -10%,#1b2530 0%,var(--bg) 60%);
+}
+#gateCard{
+  width:100%;max-width:352px;background:var(--panel);border:1px solid var(--line-2);
+  border-radius:16px;padding:26px 22px 20px;text-align:center;
+  box-shadow:0 24px 70px rgba(0,0,0,.65);
+}
+#gateCard .glogo{
+  width:56px;height:56px;margin:0 auto 14px;border-radius:14px;display:grid;place-items:center;
+  font-size:26px;background:var(--acc-soft);border:1px solid var(--line-2);
+}
+#gateCard h2{margin:0 0 4px;font-size:17px;font-weight:650}
+#gateCard p.sub{margin:0 0 18px;font-size:12.5px;color:var(--txt-3)}
+#gateInput{
+  width:100%;font-size:16px !important;text-align:center;letter-spacing:.08em;
+  padding:12px 10px;border-radius:10px;background:var(--bg);border:1px solid var(--line-2);color:var(--txt);
+}
+#gateInput:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+#gateBtn{
+  width:100%;margin-top:12px;min-height:46px;font-size:15px;font-weight:600;
+  border-radius:10px;border:1px solid var(--acc);background:var(--acc-2);color:#fff;cursor:pointer;
+}
+#gateBtn:hover{background:var(--acc)}
+#gateBtn:disabled{opacity:.6;cursor:default}
+#gateErr{min-height:18px;margin-top:9px;font-size:12px;color:var(--bad);opacity:0;transition:opacity .15s}
+#gateCard .gf{display:block;margin-top:12px;font-size:11.5px;color:var(--txt-3);cursor:pointer;text-decoration:underline}
+#gateHint{display:none;margin-top:8px;font-size:11.5px;color:var(--txt-2);line-height:1.7;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+#gateHint.on{display:block}
+#gateCard.shake{animation:gshake .32s}
+@keyframes gshake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-8px)}40%{transform:translateX(7px)}
+  60%{transform:translateX(-5px)}80%{transform:translateX(4px)}
+}
+
+/* ================= 手机端适配（<768px） =================
+ * 原则：
+ *   · 桌面端一个像素都不变（以下全部收在 media query 里）
+ *   · 手机上不缩放页面，而是重排：侧栏变抽屉、5 列以上的表格变卡片、小表格给横向滚动
+ *   · 触控尺寸：按钮 ≥44px、输入框字号 16px（iOS 聚焦才不会自动放大页面）
+ *   · 适配刘海屏：env(safe-area-inset-*)
+ * ======================================================= */
+#mtop{display:none}
+#scrim{display:none}
+
+@media (max-width: 767px){
+  html,body{height:auto}
+  body{font-size:15px;-webkit-text-size-adjust:100%;overscroll-behavior-y:contain;overflow-x:hidden}
+  #main{overflow-x:hidden}
+
+  /* ---------- 外壳：顶栏 + 抽屉侧栏 ---------- */
+  #app{flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
+  #mtop{
+    display:flex;align-items:center;gap:10px;flex:0 0 auto;
+    min-height:52px;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top));
+    background:var(--bg-2);border-bottom:1px solid var(--line);position:relative;z-index:50;
+  }
+  #navToggle{
+    width:44px;height:44px;flex:0 0 44px;padding:0;font-size:20px;line-height:42px;
+    background:var(--panel);border:1px solid var(--line-2);border-radius:9px;color:var(--txt);
+  }
+  #navToggle:active{background:var(--panel-2)}
+  #mtop .mt{font-size:14.5px;font-weight:650;letter-spacing:.2px;flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #mtop .ms{margin-left:auto;font-size:11px;color:var(--txt-3);white-space:nowrap}
+
+  #side{
+    position:fixed;top:0;bottom:0;left:0;width:82vw;max-width:308px;
+    transform:translateX(-103%);transition:transform .22s ease;
+    z-index:70;height:100vh;height:100dvh;
+    padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);
+    box-shadow:24px 0 48px rgba(0,0,0,.55);
+  }
+  #side.open{transform:none}
+  #side .nav{padding:10px 10px 20px}
+  #side .nav a{min-height:46px;font-size:14px}
+  #side .side-foot{display:none}
+
+  #scrim{
+    display:block;position:fixed;inset:0;z-index:65;background:rgba(0,0,0,.55);
+    opacity:0;pointer-events:none;transition:opacity .22s;
+  }
+  #scrim.on{opacity:1;pointer-events:auto}
+  body.navopen{overflow:hidden}
+
+  /* 底部留白：Netlify 会在右下角注入「Powered by Netlify」角标，别把最后一排内容盖住 */
+  #main{flex:1 1 auto;height:auto;overflow-x:hidden;padding:12px 12px calc(96px + env(safe-area-inset-bottom))}
+  .wrap{max-width:none}
+
+  /* ---------- 页头 ---------- */
+  .page-h{flex-direction:column;gap:8px;margin-bottom:10px}
+  .page-h h1{font-size:17px}
+  .page-h p{font-size:12px;max-width:none}
+  .page-h .flexline{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .card{padding:12px 12px}
+  .card>h2{font-size:13.8px;flex-wrap:wrap;gap:6px}
+  .card>.desc{font-size:12px}
+  .sec-title{margin:14px 0 7px}
+  .split,.split.two{gap:12px}
+
+  /* ---------- 触控尺寸 ---------- */
+  button,.btn{min-height:44px;padding:10px 14px;font-size:13.5px;
+    /* 有的按钮文案很长（「▶ 打开离线规则引擎（单参数扫描 / 坐标下降 / 留一验证）」），
+       桌面端 nowrap 没问题，手机上必须允许换行，否则会顶出屏幕 */
+    white-space:normal;word-break:break-word;text-align:center;line-height:1.35;min-width:0;max-width:100%;
+  }
+  button.sm,.btn.sm{min-height:36px;padding:7px 11px;font-size:12.5px}
+  .chip{min-height:38px;display:inline-flex;align-items:center;padding:7px 13px;font-size:12.5px}
+  /* iOS Safari：输入框字号 <16px 会在聚焦时把整页放大 → 强制 16px */
+  input:not([type=checkbox]):not([type=radio]),select,textarea{
+    font-size:16px !important;min-height:44px;padding:9px 10px;
+    /* 很多模块给控件写了内联 min-width:460px，手机上会顶出屏幕 → 一律压掉 */
+    min-width:0 !important;max-width:100% !important;width:100%;
+  }
+  textarea{min-height:120px}
+  input[type=checkbox],input[type=radio]{width:20px;height:20px}
+  /* ---------- 表单：标签在上、控件在下、占满整行 ----------
+   * 之前这里是「标签在左 / 控件在右」的横向布局。真机（360~393px）上出过事故：
+   * 单场录入的「初盘水位/终盘水位」放在 .g4 里（手机上被我压成 2 列，每格 ~168px），
+   * 横向布局撑不下 → 标签被挤成一列竖排单字、输入框错位。
+   * 手机上一律纵向堆叠，最稳。 */
+  label.f{font-size:12.5px;flex-direction:column;align-items:stretch;gap:5px;min-width:0}
+  label.f .k{flex:0 0 auto;max-width:none;white-space:normal;overflow:visible;line-height:1.4;word-break:break-word}
+  label.f>.mini{flex:0 0 auto;min-width:0;white-space:normal;word-break:break-word;margin-top:2px}
+  label.f>input,label.f>select,label.f>textarea{flex:0 0 auto;width:100% !important;max-width:100% !important;min-width:0}
+  .row{gap:8px;align-items:stretch}
+  .row>.btn,.row>button{flex:1 1 auto}
+
+  /* ---------- 栅格一律单列 ---------- */
+  .g2,.g3,.split,.split.two{grid-template-columns:1fr !important}
+  .g4{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+  .grid:not(.g2):not(.g3):not(.g4){grid-template-columns:1fr !important}
+  /* ★ 只要栅格里有表单字段，就必须单列（.g4 本来是给 KPI 卡片的两列，不能被表单借用） */
+  .grid:has(> label.f),.grid:has(label.f){grid-template-columns:1fr !important}
+  /* ★★ 模块里大量用内联 style="grid-column: span 2" 让字段「跨两列占满整行」。
+   *    一旦把栅格压成 1 列，span 2 会在网格里再生成一条**隐式列**，于是又变回两列
+   *    （真机实测算出 111px / 224px，1:2），标签就被挤成一列竖排单字。
+   *    所以：已经单列的栅格里，子项一律取消跨列/显式定位。 */
+  .g2>*,.g3>*,.grid:not(.g2):not(.g3):not(.g4)>*,.grid:has(label.f)>*{grid-column:auto !important}
+  .grid>*{min-width:0}
+
+  /* ---------- 表格：≥5 列 → 卡片；<5 列 → 横向滚动 ---------- */
+  .tw{max-height:none !important;overflow:visible;border:0;border-radius:0}
+  table.as-cards{display:block;width:100%;border-collapse:separate}
+  table.as-cards thead{display:none}
+  table.as-cards tbody{display:block}
+  table.as-cards tr{
+    display:block;margin:0 0 10px;overflow:hidden;
+    border:1px solid var(--line-2);border-radius:11px;background:var(--panel);
+  }
+  table.as-cards tr:hover{background:var(--panel)}
+  table.as-cards td{
+    display:flex;align-items:flex-start;gap:12px;
+    padding:9px 12px;border-bottom:1px solid var(--line);
+    white-space:normal;text-align:right;line-height:1.55;
+  }
+  table.as-cards td:last-child{border-bottom:0}
+  table.as-cards td::before{
+    content:attr(data-th);flex:0 0 84px;text-align:left;
+    color:var(--txt-3);font-size:11.5px;font-weight:400;white-space:normal;
+  }
+  table.as-cards td[data-th=""]::before,
+  table.as-cards td[data-nolabel]::before{display:none}
+  table.as-cards td[colspan]{display:block;text-align:left;background:var(--bg);padding:10px 12px}
+  table.as-cards td.wrapcell{max-width:340px;word-break:break-word}
+  /* 卡片里的控件撑满，方便点 */
+  table.as-cards td>button,
+  table.as-cards td>input,
+  table.as-cards td>select{flex:1 1 auto;width:auto;min-width:0}
+  table.as-cards td>span.dot+span{text-align:left}
+
+  /* 小表（≤4 列）保留表格形态，外面横向滚动，绝不压缩 */
+  .tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table.as-scroll{min-width:0 !important;width:100%;font-size:12px;table-layout:auto}
+  /* U.table 会给 <th> 写内联 min-width（128px/300px…），手机上累加会顶破屏幕 → 压掉 */
+  table.as-scroll th{min-width:0 !important;width:auto !important;white-space:normal}
+  table.as-scroll th,table.as-scroll td{white-space:normal;padding:6px 7px;word-break:break-word}
+
+  /* 球员库这类固定宽度网格：横向滚动 */
+  .pl-grid{overflow-x:auto;max-height:56vh}
+  .pl-head,.pl-row{min-width:560px}
+
+  /* ---------- 其它 ---------- */
+  .kpi{padding:9px 10px}
+  .kpi .l{font-size:11px;line-height:1.35}
+  .kpi .v{font-size:20px}
+  .stat{gap:6px}
+  .stat>span{font-size:11.5px;padding:5px 9px}
+  pre.out{max-height:280px;font-size:11.5px}
+  details{border-radius:9px}
+  details>summary{min-height:40px;display:flex;align-items:center}
+  #toast{left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom))}
+  #toast div{font-size:12.5px}
+  .legend{gap:8px;font-size:11px}
+}
+
+@media (max-width: 400px){
+  table.as-cards td::before{flex-basis:72px}
+  .page-h h1{font-size:16px}
+  #main{padding-left:10px;padding-right:10px}
+}
+</style>
+</head>
+<body class="gate">
+<!-- ================= 密码锁（未解锁时挡住整个页面） ================= -->
+<div id="gateOverlay">
+  <div id="gateCard">
+    <div class="glogo">⚽</div>
+    <h2>本心盘口分析台</h2>
+    <p class="sub">私人工具 · 请输入访问密码</p>
+    <input id="gateInput" type="password" inputmode="text" autocomplete="current-password"
+           autocapitalize="off" spellcheck="false" placeholder="密码">
+    <button id="gateBtn" type="button">进 入</button>
+    <div id="gateErr"></div>
+    <span class="gf" id="gateForgot">忘记密码？</span>
+    <div id="gateHint">
+      这个密码是搭建时随机生成的，没有找回功能。<br>
+      密码记在项目里的 <code>README.md</code>（搜索「访问密码」），
+      或者问帮你搭的人。想换密码：改 <code>js/gate.js</code> 顶部的三个常量。
+    </div>
+  </div>
+</div>
+<script src="js/gate.js?v=20261116e"></script>
+
+<div id="app">
+  <!-- 手机端顶部栏（桌面端隐藏）：汉堡按钮打开左侧导航抽屉 -->
+  <div id="mtop">
+    <button id="navToggle" type="button" aria-label="打开导航菜单">☰</button>
+    <div class="mt">本心盘口分析台</div>
+    <div class="ms" id="mtopState">离线就绪</div>
+  </div>
+  <aside id="side">
+    <div class="brand">
+      <div class="t">本心盘口分析台</div>
+      <div class="s">离线工作台 · 单页应用</div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="side-foot">
+      <span id="footState">离线就绪</span>
+      <span id="footRows">0 条</span>
+    </div>
+  </aside>
+  <main id="main"><div class="wrap" id="pages"></div></main>
+</div>
+<div id="scrim"></div>
+<div id="toast"></div>
+<!-- ===== 内核（顺序不能改：core 必须最先） ===== -->
+<script src="js/core.js?v=20261116e"></script>
+<script src="js/ui.js?v=20261116e"></script>
+<script src="js/xlsread.js?v=20261116e"></script>
+<script src="js/seed.js?v=20261116e"></script>
+<script src="js/seed-players.js?v=20261116e"></script>
+<script src="js/app.js?v=20261116e"></script>
+<!-- ===== 工具库（无页面，但必须在用到它的模块之前） ===== -->
+<script src="js/file-store.js?v=20261116e"></script>
+<script src="js/vz-api.js?v=20261116e"></script>
+<script src="js/mod-players.js?v=20261116e"></script>
+<script src="js/mod-io.js?v=20261116e"></script>
+<!-- ===== 页面模块（注册顺序 = 左侧导航顺序） ===== -->
+<script src="js/mod-dash.js?v=20261116e"></script>
+<script src="js/mod-entry.js?v=20261116e"></script>
+<script src="js/mod-batch.js?v=20261116e"></script>
+<script src="js/mod-stats.js?v=20261116e"></script>
+<script src="js/mod-bet.js?v=20261116e"></script>
+<script src="js/mod-params.js?v=20261116e"></script>
+<script src="js/mod-export.js?v=20261116e"></script>
+<script src="js/mod-ai.js?v=20261116e"></script>
+<!-- ===== 竞彩选票（依赖 js/jc-calc.js 纯计算库；数据靠本机后端 竞彩计算器\server.py） ===== -->
+<script src="js/jc-calc.js?v=20261116e"></script>
+<script src="js/mod-jc.js?v=20261116e"></script>
+<script src="js/mod-help.js?v=20261116e"></script>
+<!-- PWA：注册 Service Worker / 主屏幕安装提示 -->
+<script src="js/pwa.js?v=20261116e"></script>
+</body>
+</html>

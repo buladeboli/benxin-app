@@ -71,21 +71,42 @@ def _save_cache(c):
 _CTX = None
 
 
+def _make_legacy_ctx():
+    """建一个能连 TLS 1.0 的 SSLContext（球探只支持老 TLS）。
+
+    ★ Linux / OpenSSL 3 默认安全级别会直接拒绝 TLS 1.0，
+      所以必须把 SECLEVEL 降到 0，并且**先设密码套件、后设最低版本**。
+      这里按 4 种策略依次尝试，谁成功用谁（Windows / Linux / 各发行版都能过）。
+    """
+    strategies = [
+        ("DEFAULT@SECLEVEL=0", "TLSv1"),
+        ("ALL:@SECLEVEL=0", "TLSv1"),
+        ("DEFAULT@SECLEVEL=0", "TLSv1_2"),
+        ("ALL:@SECLEVEL=1", "TLSv1"),
+    ]
+    for ciphers, ver in strategies:
+        try:
+            ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            ctx.set_ciphers(ciphers)                    # ★ 先降安全级别（关键）
+            try:
+                ctx.minimum_version = getattr(ssl.TLSVersion, ver)
+            except Exception:
+                pass
+            return ctx
+        except Exception:                                # noqa: BLE001
+            continue
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    return ctx
+
+
 def _ctx():
     global _CTX
     if _CTX is None:
-        c = ssl.create_default_context()
-        c.check_hostname = False
-        c.verify_mode = ssl.CERT_NONE
-        try:
-            c.minimum_version = ssl.TLSVersion.TLSv1      # ★ 球探只支持老 TLS
-        except Exception:
-            pass
-        try:
-            c.set_ciphers("DEFAULT@SECLEVEL=0")
-        except Exception:
-            pass
-        _CTX = c
+        _CTX = _make_legacy_ctx()
     return _CTX
 
 
