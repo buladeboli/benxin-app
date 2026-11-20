@@ -1,0 +1,41 @@
+name: 抓取球探伤停
+
+on:
+  workflow_dispatch:
+    inputs:
+      match:
+        description: '球探比赛 ID（例如 3003849）'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 抓取
+        env:
+          MATCH: ${{ inputs.match }}
+          PYTHONIOENCODING: utf-8
+        run: python scrape_one.py
+
+      - name: 提交结果（Pages 会自动发布）
+        run: |
+          git config user.name "benxin-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add docs/data
+          if git diff --staged --quiet; then
+            echo "没有变化，跳过提交"
+          else
+            git commit -m "data: match ${{ inputs.match }}"
+            git push
+          fi
